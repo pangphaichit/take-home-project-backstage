@@ -6,7 +6,10 @@
     "build": "react-router build",
     "dev": "react-router dev",
     "start": "react-router-serve ./build/server/index.js",
-    "typecheck": "react-router typegen && tsc"
+    "typecheck": "react-router typegen && tsc",
+    "prepare": "husky",
+    "lint": "eslint --fix .",
+    "lint-staged": "lint-staged"
   },
   "dependencies": {
     "@react-router/node": "^7.5.3",
@@ -22,9 +25,71 @@
     "@types/node": "^20",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
+    "@typescript-eslint/eslint-plugin": "^8.31.1",
+    "@typescript-eslint/parser": "^8.31.1",
+    "eslint": "^9.26.0",
+    "eslint-plugin-perfectionist": "^4.12.3",
+    "gitmoji-cli": "^9.6.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.1",
+    "perfectionist": "^2.4.0",
+    "prettier": "^3.5.3",
     "tailwindcss": "^4.1.4",
     "typescript": "^5.8.3",
     "vite": "^6.3.3",
     "vite-tsconfig-paths": "^5.1.4"
+  },
+  "lint-staged": {
+    "*.ts": "eslint --fix",
+    "*.tsx": "eslint --fix",
+    "*.json": "prettier --write"
+  },
+  "eslintConfig": {
+    "parser": "@typescript-eslint/parser",
+    "extends": [
+      "eslint:recommended",
+      "plugin:@typescript-eslint/recommended",
+      "plugin:react/recommended",
+      "plugin:perfectionist/recommended",
+      "plugin:prettier/recommended"
+    ],
+    "plugins": [
+      "@typescript-eslint",
+      "react",
+      "perfectionist",
+      "prettier"
+    ],
+    "env": {
+      "browser": true,
+      "es2021": true,
+      "node": true
+    },
+    "rules": {
+      "perfectionist/indent": [
+        "error",
+        2
+      ],
+      "perfectionist/quotes": [
+        "error",
+        "single"
+      ],
+      "perfectionist/semi": [
+        "error",
+        "always"
+      ],
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/explicit-module-boundary-types": "off",
+      "react/jsx-uses-react": "error",
+      "react/react-in-jsx-scope": "error",
+      "react/prop-types": "off",
+      "react/no-unescaped-entities": "warn",
+      "react/jsx-no-undef": "warn",
+      "prettier/prettier": "error"
+    },
+    "settings": {
+      "react": {
+        "version": "detect"
+      }
+    }
   }
 }
