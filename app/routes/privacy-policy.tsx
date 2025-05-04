@@ -1,4 +1,4 @@
-const PrivacyPolicy = () => {
+export default function PrivacyPolicy() {
   return (
     <div>
       <h1 className="font-bold">Privacy Policy</h1>
@@ -8,6 +8,4 @@ const PrivacyPolicy = () => {
       </p>
     </div>
   );
-};
-
-export default PrivacyPolicy;
+}
