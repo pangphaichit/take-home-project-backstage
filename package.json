@@ -8,7 +8,7 @@
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc",
     "prepare": "husky",
-    "lint": "eslint --fix .",
+    "lint": "eslint --config eslint.config.js --fix .",
     "lint-staged": "lint-staged"
   },
   "dependencies": {
@@ -28,7 +28,10 @@
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
     "eslint": "^9.26.0",
+    "eslint-define-config": "^2.1.0",
     "eslint-plugin-perfectionist": "^4.12.3",
+    "eslint-plugin-prettier": "^5.3.1",
+    "eslint-plugin-react": "^7.37.5",
     "gitmoji-cli": "^9.6.0",
     "husky": "^9.1.7",
     "lint-staged": "^15.5.1",
@@ -43,53 +46,5 @@
     "*.ts": "eslint --fix",
     "*.tsx": "eslint --fix",
     "*.json": "prettier --write"
-  },
-  "eslintConfig": {
-    "parser": "@typescript-eslint/parser",
-    "extends": [
-      "eslint:recommended",
-      "plugin:@typescript-eslint/recommended",
-      "plugin:react/recommended",
-      "plugin:perfectionist/recommended",
-      "plugin:prettier/recommended"
-    ],
-    "plugins": [
-      "@typescript-eslint",
-      "react",
-      "perfectionist",
-      "prettier"
-    ],
-    "env": {
-      "browser": true,
-      "es2021": true,
-      "node": true
-    },
-    "rules": {
-      "perfectionist/indent": [
-        "error",
-        2
-      ],
-      "perfectionist/quotes": [
-        "error",
-        "single"
-      ],
-      "perfectionist/semi": [
-        "error",
-        "always"
-      ],
-      "@typescript-eslint/no-explicit-any": "warn",
-      "@typescript-eslint/explicit-module-boundary-types": "off",
-      "react/jsx-uses-react": "error",
-      "react/react-in-jsx-scope": "error",
-      "react/prop-types": "off",
-      "react/no-unescaped-entities": "warn",
-      "react/jsx-no-undef": "warn",
-      "prettier/prettier": "error"
-    },
-    "settings": {
-      "react": {
-        "version": "detect"
-      }
-    }
   }
 }
