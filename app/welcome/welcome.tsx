@@ -1,7 +1,17 @@
 import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 
-const mockMagazines = [
+interface Magazine {
+  issue: string;
+  color: string;
+  hexColor: string;
+  link: string;
+  linkUKAndOverseas?: string;
+  isAvailable: string;
+  coverImage: string;
+}
+
+const mockMagazines: Magazine[] = [
   {
     issue: "8",
     color: "bg-amber-100",
@@ -248,7 +258,7 @@ export function Welcome() {
         scrollBehavior: isMobile ? "auto" : "smooth",
       }}
     >
-      <header className=" p-4 z-10 md:fixed md:top-4 md:left-4 md:p-0">
+      <header className=" pt-6 pl-4 z-10 md:fixed md:top-4 md:left-4 md:p-0">
         <img
           src="/logo.png"
           alt="Backstage Talk Logo"
