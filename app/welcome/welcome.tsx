@@ -69,8 +69,8 @@ const mockMagazines = [
   },
   {
     issue: "1",
-    color: "bg-pink-500",
-    hexColor: "#ff2851",
+    color: "bg-red-600",
+    hexColor: "#dc2626",
     link: "https://brot.sk/products/backstage-talks-1",
     isAvailable: "False",
     coverImage:
@@ -119,92 +119,133 @@ export function Welcome() {
   const [currentColor, setCurrentColor] = useState(mockMagazines[0].hexColor);
   const [activeSection, setActiveSection] = useState<number>(0);
   const sectionRefs = useRef<(HTMLElement | null)[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isScrolling = useRef<boolean>(false);
+  const lastScrollTime = useRef<number>(0);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+
+  // Detect if on mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    // Check on mount
+    checkMobile();
+
+    // Check on resize
+    window.addEventListener("resize", checkMobile);
+
+    return () => {
+      window.removeEventListener("resize", checkMobile);
+    };
+  }, []);
 
   const handleScroll = () => {
-    const scrollPosition = window.scrollY;
-    const windowHeight = window.innerHeight;
-    const documentHeight = document.documentElement.scrollHeight;
+    // Update last scroll time to track when scrolling occurs
+    lastScrollTime.current = Date.now();
 
-    // Calculate the relative scroll position (0 to 1)
-    const scrollRatio = scrollPosition / (documentHeight - windowHeight);
+    // Don't process during active scrolling
+    if (isScrolling.current) return;
 
-    // Determine which sections we're between
-    const totalSections = mockMagazines.length;
-    const sectionIndex = Math.min(
-      Math.floor(scrollRatio * totalSections),
-      totalSections - 2
-    );
-
-    // Calculate the transition progress between the two sections
-    const sectionProgress = scrollRatio * totalSections - sectionIndex;
-
-    // Get the colors to interpolate between
-    const currentSectionColor = hexToRgb(mockMagazines[sectionIndex].hexColor);
-    const nextSectionColor = hexToRgb(mockMagazines[sectionIndex + 1].hexColor);
-
-    // Interpolate between the colors
-    const interpolatedColor = interpolateColor(
-      currentSectionColor,
-      nextSectionColor,
-      sectionProgress
-    );
-
-    // Set the new color
-    setCurrentColor(rgbToHex(interpolatedColor));
-
-    // Update active section based on scroll position
     // Find which section is most visible in the viewport
-    let mostVisibleSectionIndex = 0;
-    let maxVisibility = 0;
+    let closestSectionIndex = 0;
+    let minDistance = Infinity;
 
     sectionRefs.current.forEach((section, index) => {
       if (section) {
         const rect = section.getBoundingClientRect();
-        const sectionHeight = rect.height;
-        const visibleHeight =
-          Math.min(rect.bottom, windowHeight) - Math.max(rect.top, 0);
-        const visibilityRatio = Math.max(0, visibleHeight / sectionHeight);
+        const sectionTop = rect.top;
+        // Calculate distance from the section's top to the viewport top
+        const distance = Math.abs(sectionTop);
 
-        if (visibilityRatio > maxVisibility) {
-          maxVisibility = visibilityRatio;
-          mostVisibleSectionIndex = index;
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestSectionIndex = index;
         }
       }
     });
 
-    setActiveSection(mostVisibleSectionIndex);
+    // Update current color and active section
+    setCurrentColor(mockMagazines[closestSectionIndex].hexColor);
+    setActiveSection(closestSectionIndex);
+
+    // Skip auto-snapping on mobile devices
+    if (isMobile) return;
+
+    // On desktop, wait before snapping to prevent continuous snapping during scroll
+    if (!isScrolling.current) {
+      isScrolling.current = true;
+      setTimeout(() => {
+        // Check if user is still scrolling before triggering snap
+        if (Date.now() - lastScrollTime.current > 150) {
+          scrollToSection(closestSectionIndex, true);
+        }
+        isScrolling.current = false;
+      }, 250);
+    }
   };
 
   useEffect(() => {
-    window.addEventListener("scroll", handleScroll);
-
-    const hash = window.location.hash.replace("#", "") || "";
-    if (hash) {
-      const section = document.getElementById(hash);
-      if (section) {
-        section.scrollIntoView({ behavior: "smooth" });
+    // Set up intersection observer to detect which section is most visible
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const index = sectionRefs.current.findIndex(
+              (ref) => ref === entry.target
+            );
+            if (index !== -1) {
+              setActiveSection(index);
+              setCurrentColor(mockMagazines[index].hexColor);
+            }
+          }
+        });
+      },
+      {
+        threshold: 0.4,
+        rootMargin: "0px",
       }
-    }
+    );
 
+    // Observe all sections
+    sectionRefs.current.forEach((section) => {
+      if (section) observer.observe(section);
+    });
+
+    // Add scroll event listener
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    // Cleanup
     return () => {
+      sectionRefs.current.forEach((section) => {
+        if (section) observer.unobserve(section);
+      });
       window.removeEventListener("scroll", handleScroll);
     };
-  }, []);
+  }, [isMobile]);
 
-  const scrollToSection = (index: number) => {
+  const scrollToSection = (index: number, useAnimation: boolean = true) => {
     setActiveSection(index);
-    sectionRefs.current[index]?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
+    if (sectionRefs.current[index]) {
+      // Scroll to section with or without smooth behavior based on parameter
+      sectionRefs.current[index]?.scrollIntoView({
+        behavior: useAnimation ? "smooth" : "auto",
+        block: "start",
+      });
+      setCurrentColor(mockMagazines[index].hexColor);
+    }
   };
 
   return (
     <div
-      className="relative overflow-hidden overflow-x-hidden overflow-y-auto"
+      ref={containerRef}
+      className="relative overflow-hidden overflow-x-hidden overflow-y-auto font-sans  md:snap-y md:snap-mandatory md:h-screen"
       style={{
         backgroundColor: currentColor,
         transition: "background-color 0.5s ease",
+        scrollSnapType: isMobile ? "none" : "y mandatory",
+        scrollBehavior: isMobile ? "auto" : "smooth",
       }}
     >
       <header className=" p-4 z-10 md:fixed md:top-4 md:left-4 md:p-0">
@@ -219,13 +260,13 @@ export function Welcome() {
       <nav className="hidden md:block fixed right-8 bottom-4 z-10">
         <ul className="text-right">
           {mockMagazines.map((magazine, index) => (
-            <li key={index} className="mb-2">
+            <li key={index} className="mb-1">
               <button
                 onClick={() => scrollToSection(index)}
-                className={`text-sm  ${
+                className={` ${
                   activeSection === index
                     ? "font-bold"
-                    : "opacity-70 cursor-pointer"
+                    : "opacity-70 cursor-pointer hover:underline"
                 }`}
               >
                 Issue #{magazine.issue}
@@ -236,7 +277,7 @@ export function Welcome() {
       </nav>
 
       {/* Main Content with Dynamic Background Color */}
-      <main className="overflow-y-auto h-full">
+      <main className=" h-full">
         {mockMagazines.map((mag, index) => (
           <section
             key={mag.issue}
@@ -244,86 +285,129 @@ export function Welcome() {
               sectionRefs.current[index] = el ?? null;
             }}
             id={`issue${mag.issue}`}
-            className="issue-section h-screen flex items-center justify-center"
+            className="md:snap-start issue-section h-screen flex mt-9 md:mt-0 md:items-center justify-center"
+            style={{
+              scrollSnapAlign: isMobile ? "none" : "start",
+              scrollSnapStop: isMobile ? "normal" : "always",
+            }}
             data-id={mag.issue}
             data-color={mag.hexColor}
           >
-            <div className="flex flex-col items-center text-center space-y-2">
+            <div className="flex flex-col items-center text-center">
               <img
                 src={mag.coverImage}
                 alt={`Issue ${mag.issue}`}
-                className="max-h-[80vh] max-w-[80vw] md:max-h-[70vh] md:max-w-[70vw] object-contain"
+                className="max-h-[80vh] max-w-[80vw] md:max-h-[70vh] md:max-w-[70vw]  object-contain"
               />
 
-              <h1 className="text-xl font-semibold">
+              <h1 className="text-lg font-bold">
                 Issue #{mag.issue}{" "}
                 {mag.isAvailable === "True" ? null : <span>is sold out.</span>}
               </h1>
 
               {mag.isAvailable === "True" ? (
                 <>
-                  <a
-                    href={mag.link}
-                    className={`${
-                      mag.hexColor === "#ffffff"
-                        ? "text-pink-500"
-                        : "text-white"
-                    }`}
-                  >
-                    BUY HERE{" "}
-                    {mag.linkUKAndOverseas && (
-                      <span className="text-black">(Europe)</span>
-                    )}
-                  </a>
-                  {mag.linkUKAndOverseas && (
-                    <a href={mag.linkUKAndOverseas} className="text-white">
-                      BUY HERE{" "}
-                      <span className="text-black">(UK & Overseas)</span>
+                  <div className="mt-4">
+                    <a
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      href={mag.link}
+                      className={` mt-4 font-bold hover:underline ${
+                        mag.hexColor === "#ffffff"
+                          ? "text-pink-500"
+                          : "text-white"
+                      }`}
+                    >
+                      BUY HERE
                     </a>
+                    {mag.linkUKAndOverseas && (
+                      <span className="text-black font-bold"> (Europe)</span>
+                    )}
+                  </div>
+                  {mag.linkUKAndOverseas && (
+                    <div>
+                      <a
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        href={mag.linkUKAndOverseas}
+                        className="text-white font-bold hover:underline"
+                      >
+                        BUY HERE
+                      </a>
+                      <span className="text-black font-bold">
+                        {" "}
+                        (UK & Overseas)
+                      </span>
+                    </div>
                   )}
-                  <span className="text-black">
+                  <span className="text-black font-semibold text-[0.95rem] mt-4">
                     or in{" "}
-                    <Link to="/stocklist" className="text-white">
-                      {" "}
-                      selected stores.
+                    <Link
+                      to="/stocklist"
+                      className={`font-bold hover:underline ${
+                        mag.hexColor === "#ffffff"
+                          ? "text-pink-500"
+                          : "text-white"
+                      }`}
+                    >
+                      selected stores<span className="text-black">.</span>
                     </Link>
                   </span>
                 </>
               ) : (
-                <span className="text-black">
+                <span className="text-black text-[0.95rem] mt-4 font-semibold p-4">
                   If you are lucky, you may get the last pieces in{" "}
-                  <Link to="/stocklist" className="text-white">
-                    {" "}
-                    selected stores.
+                  <Link to="/stocklist" className="text-white hover:underline">
+                    selected stores
                   </Link>
+                  <span className="text-black">.</span>
                 </span>
               )}
             </div>
           </section>
         ))}
       </main>
+      <a
+        href="mailto:info@backstagetalks.com"
+        className="hover:underline mb-10 text-lg font-semibold md:fixed md:right-8 md:top-4 hidden md:block"
+      >
+        info@backstagetalks.com
+      </a>
 
-      <footer className="text-center text-xs p-4  md:fixed md:bottom-4 md:left-4 md:p-0 md:w-[20%] md:text-start">
-        <p className="text-sm md:text-lg mb-1">
-          Backstage Talks is a magazine of casual, but in-depth dialogues on
-          design and business. Our decisions shape and influence this complex
-          world—to have a chance to make the right ones, we need to talk.
-        </p>
-        <p className="mb-1">
-          © 2025 Published by{" "}
-          <a href="https://buromilk.com/" className="underline">
-            Büro Milk
-          </a>
-        </p>
-        <nav className="mb-1">
-          <Link to="/privacy-policy" className="underline mr-2">
+      <footer className="flex flex-col gap-10 text-center text-xs p-4  md:fixed md:bottom-0 md:left-4 md:p-0 md:w-[20%] md:text-start">
+        <div>
+          <p className="text-lg font-semibold md:text-lg mb-1">
+            Backstage Talks is a magazine of casual, but in-depth dialogues on
+            design and business. Our decisions shape and influence this complex
+            world—to have a chance to make the right ones, we need to talk.
+          </p>
+          <p className="mb-1">
+            © 2025{" "}
+            <a
+              target="_blank"
+              rel="noopener noreferrer"
+              href="https://buromilk.com/"
+              className="underline hover:no-underline"
+            >
+              Published by Büro Milk
+            </a>
+          </p>
+        </div>
+        <nav className="flex flex-col text-lg font-semibold">
+          <Link
+            to="/privacy-policy"
+            className="underline mr-2 hover:no-underline"
+          >
             Privacy Policy
           </Link>
-          <Link to="/survey" className="underline">
+          <Link to="/survey" className="underline md:mb-4 hover:no-underline">
             Survey
           </Link>
         </nav>
-        <a href="mailto:info@backstagetalks.com" className="underline">
+        <a
+          href="mailto:info@backstagetalks.com"
+          className="hover:underline mb-10 text-lg font-semibold block md:hidden"
+        >
           info@backstagetalks.com
         </a>
       </footer>
