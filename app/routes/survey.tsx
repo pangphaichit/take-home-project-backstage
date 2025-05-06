@@ -88,7 +88,7 @@ export default function Survey() {
 
   return (
     <div>
-      <header className="p-4 z-10 md:fixed md:top-4 md:left-4 md:p-0">
+      <header className="pt-6 pl-4 p-4 z-10 md:fixed md:top-4 md:left-4 md:p-0">
         <Link to="/">
           <img
             src="/logo.png"
